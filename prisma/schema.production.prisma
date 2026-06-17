@@ -1,0 +1,45 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("POSTGRES_PRISMA_URL")
+}
+
+model Paper {
+  id                String    @id @default(cuid())
+  title             String
+  fileName          String
+  filePath          String
+  language          String    @default("zh")
+  translated        Boolean   @default(false)
+  textContent       String    @default("")
+  translatedContent String?
+  outline           String?
+  mindmap           String?
+  cases             String?
+  theories          String?
+  batchId           String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  chatMessages      ChatMessage[]
+  batch             Batch?    @relation(fields: [batchId], references: [id])
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  paperId   String
+  role      String
+  content   String
+  createdAt DateTime @default(now())
+  paper     Paper    @relation(fields: [paperId], references: [id], onDelete: Cascade)
+}
+
+model Batch {
+  id        String   @id @default(cuid())
+  name      String
+  framework String?
+  createdAt DateTime @default(now())
+  papers    Paper[]
+}

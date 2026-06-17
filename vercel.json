@@ -1,0 +1,9 @@
+{
+  "buildCommand": "cp prisma/schema.production.prisma prisma/schema.prisma && prisma generate && prisma db push && next build",
+  "outputDirectory": ".next",
+  "framework": "nextjs",
+  "installCommand": "npm install",
+  "env": {
+    "DASHSCOPE_API_KEY": "@dashscope-api-key"
+  }
+}
