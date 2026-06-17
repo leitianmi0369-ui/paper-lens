@@ -4,29 +4,38 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
-function createPrismaClient() {
-  // For production (Vercel with PostgreSQL)
-  if (process.env.POSTGRES_PRISMA_URL) {
-    const { Pool } = require('pg')
-    const { PrismaPg } = require('@prisma/adapter-pg')
+function createClient(): PrismaClient {
+  // Check if we have PostgreSQL URL (production)
+  const pgUrl = process.env.POSTGRES_PRISMA_URL
 
-    const pool = new Pool({
-      connectionString: process.env.POSTGRES_PRISMA_URL,
-    })
-    const adapter = new PrismaPg(pool)
-
-    return new PrismaClient({ adapter })
+  if (pgUrl) {
+    // Production: use PostgreSQL adapter
+    try {
+      // Use eval to hide from bundler
+      const pg = eval('require')('pg')
+      const adapterPg = eval('require')('@prisma/adapter-pg')
+      const pool = new pg.Pool({ connectionString: pgUrl })
+      const adapter = new adapterPg.PrismaPg(pool)
+      return new PrismaClient({ adapter })
+    } catch (e) {
+      console.error('Failed to create PostgreSQL client:', e)
+      return new PrismaClient()
+    }
   }
 
-  // For local development (SQLite)
-  const { PrismaBetterSqlite3 } = require('@prisma/adapter-better-sqlite3')
-  const adapter = new PrismaBetterSqlite3({
-    url: process.env.DATABASE_URL || 'file:./prisma/dev.db',
-  })
-
-  return new PrismaClient({ adapter })
+  // Local: use SQLite adapter
+  try {
+    const adapterSqlite = eval('require')('@prisma/adapter-better-sqlite3')
+    const adapter = new adapterSqlite.PrismaBetterSqlite3({
+      url: 'file:./prisma/dev.db',
+    })
+    return new PrismaClient({ adapter })
+  } catch (e) {
+    console.error('Failed to create SQLite client:', e)
+    return new PrismaClient()
+  }
 }
 
-export const prisma = globalForPrisma.prisma ?? createPrismaClient()
+export const prisma = globalForPrisma.prisma ?? createClient()
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
