@@ -4,20 +4,33 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
-// Simple PrismaClient initialization
-// Prisma will use the connection URL from prisma.config.ts
-export const prisma = (() => {
-  if (globalForPrisma.prisma) return globalForPrisma.prisma
+// Create a dynamic require function that bundlers can't analyze
+const dynamicRequire = new Function('module', 'return require(module)')
 
-  try {
-    const client = new PrismaClient()
-    if (process.env.NODE_ENV !== 'production') {
-      globalForPrisma.prisma = client
-    }
-    return client
-  } catch (e) {
-    console.error('Failed to create PrismaClient:', e)
-    // Return a mock client that will fail gracefully
-    return new PrismaClient()
+function createPrismaClient(): PrismaClient {
+  const isProduction = process.env.VERCEL === '1' || !!process.env.POSTGRES_PRISMA_URL
+
+  if (isProduction) {
+    // Production: PostgreSQL
+    const pg = dynamicRequire('pg')
+    const { PrismaPg } = dynamicRequire('@prisma/adapter-pg')
+    const pool = new pg.Pool({
+      connectionString: process.env.POSTGRES_PRISMA_URL,
+    })
+    const adapter = new PrismaPg(pool)
+    return new PrismaClient({ adapter })
   }
-})()
+
+  // Local: SQLite
+  const { PrismaBetterSqlite3 } = dynamicRequire('@prisma/adapter-better-sqlite3')
+  const adapter = new PrismaBetterSqlite3({
+    url: process.env.DATABASE_URL || 'file:./prisma/dev.db',
+  })
+  return new PrismaClient({ adapter })
+}
+
+export const prisma = globalForPrisma.prisma ?? createPrismaClient()
+
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prisma = prisma
+}
