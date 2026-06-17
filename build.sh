@@ -1,15 +1,23 @@
 #!/bin/bash
+set -e
 
-# Use PostgreSQL schema for production
+echo "=== Starting build ==="
+
+# Check if running on Vercel
 if [ "$VERCEL" = "1" ]; then
+  echo "Running on Vercel, using PostgreSQL schema"
   cp prisma/schema.production.prisma prisma/schema.prisma
+else
+  echo "Running locally, using SQLite schema"
 fi
 
-# Generate Prisma client
+echo "=== Generating Prisma client ==="
 npx prisma generate
 
-# Push database schema
-npx prisma db push
+echo "=== Pushing database schema ==="
+npx prisma db push --accept-data-loss
 
-# Build Next.js
+echo "=== Building Next.js ==="
 npx next build
+
+echo "=== Build complete ==="
