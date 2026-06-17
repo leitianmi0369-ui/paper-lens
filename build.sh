@@ -15,7 +15,7 @@ echo "=== Generating Prisma client ==="
 npx prisma generate
 
 echo "=== Pushing database schema ==="
-npx prisma db push --accept-data-loss
+npx prisma db push --accept-data-loss || echo "Warning: db push failed, continuing..."
 
 echo "=== Building Next.js ==="
 npx next build
